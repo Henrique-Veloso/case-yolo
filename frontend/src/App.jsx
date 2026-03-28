@@ -1,19 +1,65 @@
 import { useState } from 'react';
-import { Plus, Edit, Trash2, User } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import CardPessoa from './components/CardPessoa';
+import ModalForm from './components/ModalForm';
 import { mockPessoas } from './data/mockData';
 import './App.css';
 
 function App() {
-  //Armazenar o valor 
+  const [pessoas, setPessoas] = useState(mockPessoas);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  //Guardar qual pessoa editando
+  const [pessoaEditando, setPessoaEditando] = useState(null);
+  
   const [filtro, setFiltro] = useState('');
+  
+  const tiposUnicos = [...new Set(pessoas.map(p => p.Tipo))];
 
-  //Extrair tipos para montar as opções do select
-  const tiposUnicos = [...new Set(mockPessoas.map(p => p.Tipo))];
-
-  // Filtrar lista 
   const pessoasFiltradas = filtro 
-    ? mockPessoas.filter(p => p.Tipo === filtro) 
-    : mockPessoas;
+    ? pessoas.filter(p => p.Tipo === filtro) 
+    : pessoas;
+
+  const handleSalvarPessoa = (dadosFormulario) => {
+    if (pessoaEditando) {
+      //Atualiza a pessoa na lista com o mesmo ID
+      const listaAtualizada = pessoas.map(p => 
+        p.id === pessoaEditando.id ? { ...dadosFormulario, id: p.id, 'Data de Cadastro': p['Data de Cadastro'] } : p
+      );
+      setPessoas(listaAtualizada);
+    } else {
+      //Adiciona uma nova pessoa
+      const novaPessoa = {
+        ...dadosFormulario,
+        id: Date.now().toString(),
+        'Data de Cadastro': new Date().toISOString().split('T')[0]
+      };
+      setPessoas([...pessoas, novaPessoa]);
+    }
+    
+    fecharModal();
+  };
+
+  //Deletar filtrando o ID fora da lista
+  const handleDeletar = (idParaDeletar) => {
+    const confirmacao = window.confirm("Tem certeza que deseja excluir este cadastro?");
+    if (confirmacao) {
+      const listaFiltrada = pessoas.filter(p => p.id !== idParaDeletar);
+      setPessoas(listaFiltrada);
+    }
+  };
+
+  //Preparar o modal para edição
+  const handleEditar = (pessoa) => {
+    setPessoaEditando(pessoa);
+    setIsModalOpen(true);
+  };
+
+  //Limpar ao fechar o modal
+  const fecharModal = () => {
+    setIsModalOpen(false);
+    setPessoaEditando(null);
+  };
 
   return (
     <div className="app-container">
@@ -32,7 +78,7 @@ function App() {
             ))}
           </select>
           
-          <button className="btn-add">
+          <button className="btn-add" onClick={() => setIsModalOpen(true)}>
             <Plus size={18} /> Adicionar
           </button>
         </div>
@@ -40,27 +86,22 @@ function App() {
 
       <main className="list-container">
         {pessoasFiltradas.map(pessoa => (
-          <div key={pessoa.id} className="person-card">
-            <div className="avatar">
-              <User size={28} color="#aaa" />
-            </div>
-            
-            <div className="person-info">
-              <h3 className="person-name">{pessoa.Nome}</h3>
-              <p className="person-contact">{pessoa.Telefone}</p>
-              <p className="person-contact">{pessoa['E-mail']}</p>
-            </div>
-            
-            <div className="person-meta">
-              <span className="person-date">{pessoa['Data de Cadastro']}</span>
-              <div className="action-buttons">
-                <button className="icon-btn"><Edit size={20} color="#666" /></button>
-                <button className="icon-btn"><Trash2 size={20} color="#666" /></button>
-              </div>
-            </div>
-          </div>
+          <CardPessoa 
+            key={pessoa.id} 
+            pessoa={pessoa} 
+            onEdit={handleEditar}      
+            onDelete={handleDeletar}   
+          />
         ))}
       </main>
+
+      {isModalOpen && (
+        <ModalForm 
+          onClose={fecharModal} 
+          onSave={handleSalvarPessoa} 
+          pessoaEditando={pessoaEditando} 
+        />
+      )}
     </div>
   );
 }

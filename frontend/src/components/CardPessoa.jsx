@@ -1,7 +1,6 @@
 import { Edit, Trash2, User } from 'lucide-react';
 
-//Recebe pessoa como uma propriedade
-function CardPessoa({ pessoa }) {
+function CardPessoa({ pessoa, onEdit, onDelete }) {
   return (
     <div className="person-card">
       <div className="avatar">
@@ -17,9 +16,12 @@ function CardPessoa({ pessoa }) {
       <div className="person-meta">
         <span className="person-date">{pessoa['Data de Cadastro']}</span>
         <div className="action-buttons">
-          {/* Mais para frente, adicionaremos as funções de clique aqui */}
-          <button className="icon-btn"><Edit size={20} color="#666" /></button>
-          <button className="icon-btn"><Trash2 size={20} color="#666" /></button>
+          <button className="icon-btn" onClick={() => onEdit(pessoa)}>
+            <Edit size={20} color="#666" />
+          </button>
+          <button className="icon-btn" onClick={() => onDelete(pessoa.id)}>
+            <Trash2 size={20} color="#666" />
+          </button>
         </div>
       </div>
     </div>

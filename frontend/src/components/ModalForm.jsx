@@ -1,25 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
-function ModalForm({ onClose, onSave }) {
-
-  //Armazenar 
+function ModalForm({ onClose, onSave, pessoaEditando }) {
+  
+  // Inicializa o estado
   const [formData, setFormData] = useState({
-    Nome: '',
-    Telefone: '',
-    'E-mail': '',
-    Tipo: ''
+    Nome: pessoaEditando ? pessoaEditando.Nome : '',
+    Telefone: pessoaEditando ? pessoaEditando.Telefone : '',
+    'E-mail': pessoaEditando ? pessoaEditando['E-mail'] : '',
+    Tipo: pessoaEditando ? pessoaEditando.Tipo : ''
   });
 
-  //Atualizar 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
-  //Salvar
   const handleSubmit = (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
     onSave(formData);
   };
 
@@ -27,7 +25,8 @@ function ModalForm({ onClose, onSave }) {
     <div className="modal-overlay">
       <div className="modal-content">
         <header className="modal-header">
-          <h2>Cadastrar Pessoa</h2>
+          {/* Título dinâmico */}
+          <h2>{pessoaEditando ? 'Editar Pessoa' : 'Cadastrar Pessoa'}</h2>
           <button className="icon-btn" onClick={onClose}>
             <X size={24} color="#666" />
           </button>
@@ -71,7 +70,9 @@ function ModalForm({ onClose, onSave }) {
 
           <div className="modal-actions">
             <button type="button" className="btn-cancel" onClick={onClose}>Cancelar</button>
-            <button type="submit" className="btn-save">Salvar</button>
+            <button type="submit" className="btn-save">
+              {pessoaEditando ? 'Atualizar' : 'Salvar'}
+            </button>
           </div>
         </form>
       </div>
