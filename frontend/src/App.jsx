@@ -1,61 +1,82 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import CardPessoa from './components/CardPessoa';
 import ModalForm from './components/ModalForm';
-import { mockPessoas } from './data/mockData';
 import './App.css';
 
+const API_URL = "https://6se860zrej.execute-api.us-east-2.amazonaws.com/dev/pessoas";
+
 function App() {
-  const [pessoas, setPessoas] = useState(mockPessoas);
+  const [pessoas, setPessoas] = useState([]); 
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  //Guardar qual pessoa editando
   const [pessoaEditando, setPessoaEditando] = useState(null);
-  
   const [filtro, setFiltro] = useState('');
-  
-  const tiposUnicos = [...new Set(pessoas.map(p => p.Tipo))];
 
-  const pessoasFiltradas = filtro 
-    ? pessoas.filter(p => p.Tipo === filtro) 
-    : pessoas;
-
-  const handleSalvarPessoa = (dadosFormulario) => {
-    if (pessoaEditando) {
-      //Atualiza a pessoa na lista com o mesmo ID
-      const listaAtualizada = pessoas.map(p => 
-        p.id === pessoaEditando.id ? { ...dadosFormulario, id: p.id, 'Data de Cadastro': p['Data de Cadastro'] } : p
-      );
-      setPessoas(listaAtualizada);
-    } else {
-      //Adiciona uma nova pessoa
-      const novaPessoa = {
-        ...dadosFormulario,
-        id: Date.now().toString(),
-        'Data de Cadastro': new Date().toISOString().split('T')[0]
-      };
-      setPessoas([...pessoas, novaPessoa]);
-    }
-    
-    fecharModal();
-  };
-
-  //Deletar filtrando o ID fora da lista
-  const handleDeletar = (idParaDeletar) => {
-    const confirmacao = window.confirm("Tem certeza que deseja excluir este cadastro?");
-    if (confirmacao) {
-      const listaFiltrada = pessoas.filter(p => p.id !== idParaDeletar);
-      setPessoas(listaFiltrada);
+  //READ
+  const fetchPessoas = async () => {
+    try {
+      const response = await fetch(API_URL);
+      const data = await response.json();
+      setPessoas(data);
+    } catch (error) {
+      console.error("Erro ao carregar dados:", error);
     }
   };
 
-  //Preparar o modal para edição
+  useEffect(() => {
+    fetchPessoas();
+  }, []);
+
+  const tiposUnicos = [...new Set(pessoas.map(p => p.tipo))];
+  const pessoasFiltradas = filtro ? pessoas.filter(p => p.tipo === filtro) : pessoas;
+
+  //CREATE e UPDATE
+  const handleSalvarPessoa = async (dadosFormulario) => {
+    try {
+      if (pessoaEditando) {
+        const payload = { ...dadosFormulario, id: pessoaEditando.id };
+        await fetch(API_URL, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } else {
+        await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(dadosFormulario)
+        });
+      }
+      
+      await fetchPessoas(); 
+      fecharModal();
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+    }
+  };
+
+  //DELETE
+  const handleDeletar = async (idParaDeletar) => {
+    if (window.confirm("Tem certeza que deseja excluir este cadastro?")) {
+      try {
+        await fetch(API_URL, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: idParaDeletar })
+        });
+        
+        await fetchPessoas(); 
+      } catch (error) {
+        console.error("Erro ao deletar:", error);
+      }
+    }
+  };
+
   const handleEditar = (pessoa) => {
     setPessoaEditando(pessoa);
     setIsModalOpen(true);
   };
 
-  //Limpar ao fechar o modal
   const fecharModal = () => {
     setIsModalOpen(false);
     setPessoaEditando(null);
@@ -63,7 +84,9 @@ function App() {
 
   return (
     <div className="app-container">
+
       <header className="top-bar">
+
         <h1 className="logo-text">yolo<span className="logo-sub">coliving</span></h1>
         
         <div className="actions">
@@ -73,7 +96,7 @@ function App() {
             onChange={(e) => setFiltro(e.target.value)}
           >
             <option value="">Selecione um filtro</option>
-            {tiposUnicos.map(tipo => (
+            {tiposUnicos.filter(Boolean).map(tipo => (
               <option key={tipo} value={tipo}>{tipo}</option>
             ))}
           </select>
@@ -89,8 +112,8 @@ function App() {
           <CardPessoa 
             key={pessoa.id} 
             pessoa={pessoa} 
-            onEdit={handleEditar}      
-            onDelete={handleDeletar}   
+            onEdit={handleEditar}
+            onDelete={handleDeletar}
           />
         ))}
       </main>
@@ -99,7 +122,7 @@ function App() {
         <ModalForm 
           onClose={fecharModal} 
           onSave={handleSalvarPessoa} 
-          pessoaEditando={pessoaEditando} 
+          pessoaEditando={pessoaEditando}
         />
       )}
     </div>
