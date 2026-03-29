@@ -4,27 +4,28 @@ import uuid
 from datetime import datetime
 from boto3.dynamodb.conditions import Key
 
-#Iniciar DynamoDB e pegar as credenciais da AWS
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table('yolo-pessoas')
 
-#Formatar a resposta para a API
 def build_response(status_code, body):
     return {
         'statusCode': status_code,
         'headers': {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': '*', 
+            'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE',
+            'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
         },
         'body': json.dumps(body)
     }
 
-#Entrada Lambda
 def lambda_handler(event, context):
     http_method = event.get('httpMethod')
     
     try:
-        if http_method == 'POST':
+        if http_method == 'OPTIONS':
+            return build_response(200, 'CORS OK')
+        elif http_method == 'POST':
             return create_pessoa(event)
         elif http_method == 'GET':
             return get_pessoas(event)
@@ -33,22 +34,19 @@ def lambda_handler(event, context):
         elif http_method == 'DELETE':
             return delete_pessoa(event)
         else:
-            return build_response(400, {'message': 'Método HTTP'})
+            return build_response(400, {'message': f'Método HTTP não suportado: {http_method}'})
             
     except Exception as e:
         print(f"Erro no servidor: {str(e)}")
-        return build_response(500, {'error': 'Erro no servidor.'})
+        return build_response(500, {'error': 'Erro interno no servidor.'})
 
-#Criar novo registro no DynamoDB
 def create_pessoa(event):
     body = json.loads(event.get('body', '{}'))
     
-    #Validação 
     required_fields = ['nome', 'telefone', 'email', 'tipo']
     if not all(field in body for field in required_fields):
         return build_response(400, {'message': 'Faltam campos obrigatórios.'})
         
-    #Gerar ID único e definir a data de cadastro 
     item_id = str(uuid.uuid4())
     data_cadastro = body.get('data_cadastro', datetime.now().strftime('%Y-%m-%d'))
     
@@ -64,12 +62,10 @@ def create_pessoa(event):
     table.put_item(Item=novo_item)
     return build_response(201, {'message': 'Pessoa cadastrada com sucesso!', 'item': novo_item})
 
-#Busca pessoas
 def get_pessoas(event):
     query_params = event.get('queryStringParameters') or {}
     
     if 'tipo' in query_params:
-        #Filtrar por tipo
         tipo_buscado = query_params['tipo']
         response = table.query(
             IndexName='TipoIndex',
@@ -77,13 +73,11 @@ def get_pessoas(event):
         )
         items = response.get('Items', [])
     else:
-        #Retorna todos os registros
         response = table.scan()
         items = response.get('Items', [])
         
     return build_response(200, items)
 
-#Atualiza os dados de uma pessoa existente pelo ID
 def update_pessoa(event):
     body = json.loads(event.get('body', '{}'))
     item_id = body.get('id')
@@ -91,19 +85,19 @@ def update_pessoa(event):
     if not item_id:
         return build_response(400, {'message': 'O ID é obrigatório para atualização.'})
         
-    #Exemplo simples
     response = table.update_item(
         Key={'id': item_id},
-        UpdateExpression="set telefone=:t, email=:e",
+        UpdateExpression="set nome=:n, telefone=:t, email=:e, tipo=:tp",
         ExpressionAttributeValues={
+            ':n': body.get('nome'),
             ':t': body.get('telefone'),
-            ':e': body.get('email')
+            ':e': body.get('email'),
+            ':tp': body.get('tipo')
         },
         ReturnValues="UPDATED_NEW"
     )
     return build_response(200, {'message': 'Atualizado com sucesso', 'updated': response.get('Attributes')})
 
-#Remove uma pessoa da tabela pelo ID.
 def delete_pessoa(event):
     body = json.loads(event.get('body', '{}'))
     item_id = body.get('id')
