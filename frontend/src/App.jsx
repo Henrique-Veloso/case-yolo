@@ -4,7 +4,7 @@ import CardPessoa from './components/CardPessoa';
 import ModalForm from './components/ModalForm';
 import './App.css';
 
-const API_URL = "https://6se860zrej.execute-api.us-east-2.amazonaws.com/dev/pessoas";
+const API_URL = process.env.REACT_APP_API_URL
 
 function App() {
   const [pessoas, setPessoas] = useState([]); 
